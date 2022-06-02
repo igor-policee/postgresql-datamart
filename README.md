@@ -1,308 +1,53 @@
-# 1. Витрина для RFM-анализа
+# Витрина данных для RFM-классификации пользователей приложения
 
-## 1.1. Описание целевой витрины
-
-### Заказчик
-- Компания-разработчик приложения доставки еды.
-
-### Название и расположение витрины
-- База данных компании. Ссылка на витрину: analysis.dm_rfm_segments.
-
-### Назначение витрины
-- Витрина для RFM-классификации пользователей приложения.
-
-### Описание бизнес-логики
-RFM — способ сегментации клиентов, при котором анализируют их лояльность: как часто, на какие суммы и когда в последний раз тот или иной клиент покупал что-то. На основе этого выбирают клиентские категории, на которые стоит направить маркетинговые усилия.
-
+RFM (от англ. Recency Frequency Monetary Value) — способ сегментации клиентов, при котором анализируют их лояльность: как часто, на какие суммы и когда в последний раз тот или иной клиент покупал что-то. На основе этого выбирают клиентские категории, на которые стоит направить маркетинговые усилия.
 Каждого клиента оценивают по трём факторам:
+- Recency (пер. «давность») — сколько времени прошло с момента последнего заказа.
+- Frequency (пер. «частота») — количество заказов.
+- Monetary Value (пер. «денежная ценность») — сумма затрат клиента.
 
-- Recency (пер. «давность») — сколько времени прошло с момента последнего заказа. Измеряется по последнему заказу. Клиенты должны быть распределены по шкале от одного до пяти, где значение 1 - клиенты, которые либо вообще не делали заказов, либо делали их очень давно, а 5 — те, кто заказывал относительно недавно.
-- Frequency (пер. «частота») — количество заказов. Клиенты должны быть распределены по шкале от одного до пяти, где значение 1 - это клиенты с наименьшим количеством заказов, а 5 — с наибольшим.
-- Monetary Value (пер. «денежная ценность») — сумма затрат клиента. Клиенты должны быть распределены по шкале от одного до пяти, где значение 1 получат клиенты с наименьшей суммой, а 5 — с наибольшей.
+## Описание целевой витрины и входных данных
 
-Количество клиентов в каждом сегменте должно быть одинаково разделено на 5 равных частей. 
+> [Требования к целевой витрине](requirements.md)
 
-### Описание полей витрины
-- user_id - id пользователя.
-- recency - число от 1 до 5.
-- frequency - число от 1 до 5.
-- monetary_value - число от 1 до 5.
+> [Качество входных данных](data_quality.md)
 
-### Срез данных
-- Нужны данные с начала 2021 года.
-- Для анализа выбираются успешно выполненные заказы. Эти заказы имеют статус "Closed".
+## Подготовка витрины
 
-### Частота обновления данных
-- Обновления не нужны.
+### Представление для таблиц из схемы `production` в схеме `analysis`
 
-### Источники данных
-- База данных компании. Схема данных "production".
+При расчете витрины будем обращаться только к объектам из схемы `analysis`. 
+Чтобы не дублировать данные (данные находятся в этой же базе), сделаем представления, которые отображают данные из схемы `production` в схему `analysis`.
 
-## 1.2. Структура исходных данных.
+> [SQL для создания представлений](src/views.sql) 
 
-Для построения витрины потребуются следующие таблицы и атрибуты:
-- production.orders.order_id
-- production.orders.user_id
-- production.orders.order_ts
-- production.orders.payment
-- production.orderstatuses.id
-- production.orderstatuses.key
+### Создание целевой витрины `analysis.dm_rfm_segments`
 
-## 1.3. Качество данных
+> [SQL для создания витрины](src/datamart_ddl.sql)
 
-- Данные в таблице production.orders, на основе которых строится витрина, не содержат значений типа NULL и дублей, распределение цен в колонке payment не содержит выбросов.
-- Все таблицы схемы production имеют primary key.
-- Внешние ключи есть у таблиц orderitems, orderstatuslog.
-- Атрибуты всех таблиц схемы production, кроме users.name, имеют ограничение на значения типа NULL.
-- Таблицы orderitems и orders имеют ограничения типа CHECK на числовые данные, отвечающие за цены.
-- Типы данных отвечают бизнес-логике.
+### Заполнение витрины
 
-На основе этой информации можно сделать вывод о достаточно высоком качестве данных в схеме production. 
-Целостность данных можно доработать, создав дополнительные связи между таблицами orderstatuses и orders отношением один ко многим.
+> [SQL для расчета, создания и заполнения таблицы Recency](src/tmp_rfm_recency.sql)
 
-## 1.4. Подготовка витрины данных
+> [SQL для расчета, создания и заполнения таблицы Frequency](src/tmp_rfm_frequency.sql)
 
-### 1.4.1. VIEW для таблиц из схемы production в схеме analysis
+> [SQL для расчета, создания и заполнения таблицы Monetary Value](src/tmp_rfm_monetary_value.sql)
 
-Заказчиком было обозначено дополнительное требование: при расчете витрины обращаться только к объектам из схемы analysis. 
-Чтобы не дублировать данные (данные находятся в этой же базе), будем делать VIEW. Таким образом, VIEW будут находиться в схеме analysis и вычитывать данные из схемы production. 
+> [SQL для объединения показателей и заполнения целевой витрины](src/datamart_query.sql)
 
-SQL-скрипты для создания шести VIEW (по одному на каждую таблицу) в схеме analysis.
+## Доработка представлений
 
-```SQL
-CREATE OR REPLACE VIEW de.analysis.orderitems AS
-SELECT * FROM de.production.orderitems;
-   
-CREATE OR REPLACE VIEW de.analysis.orders AS
-SELECT * FROM de.production.orders;
-   
-CREATE OR REPLACE VIEW de.analysis.orderstatuses AS
-SELECT * FROM de.production.orderstatuses;
-   
-CREATE OR REPLACE VIEW de.analysis.orderstatuslog AS
-SELECT * FROM de.production.orderstatuslog;
-   
-CREATE OR REPLACE VIEW de.analysis.products AS
-SELECT * FROM de.production.products;
-   
-CREATE OR REPLACE VIEW de.analysis.users AS
-SELECT * FROM de.production.users;
-```
+Разработчики приложения обновили структуру данных в схеме `de.production`. 
+В таблице `production.orders` больше нет поля статуса, а это поле необходимо для фильтра заказов со статусом `«Closed»`.
+Вместо этого в базу была добавлена таблица для журналирования всех изменений статусов заказов — `production.orderstatuslog`.
 
-### 1.4.2. DDL-запрос для создания витрины.
+Структура таблицы:
+- `id` — синтетический автогенерируемый идентификатор записи.
+- `order_id` — идентификатор заказа, внешний ключ на таблицу `production.orders`.
+- `status_id` — идентификатор статуса, внешний ключ на таблицу `production.orderstatuses`.
+- `dttm` — дата и время получения заказом этого статуса.
 
-SQL-скрипт для создания целевой витрины в схеме analysis.
+Чтобы скрипт по расчёту витрины продолжил работать, необходимо внести изменения в логику формирования представления `analysis.orders`, а именно вернуть в него поле `status`. 
+Значение в этом поле должно соответствовать последнему по времени статусу из таблицы `production.orderstatuslog`.
 
-```SQL
-CREATE TABLE IF NOT EXISTS de.analysis.dm_rfm_segments (
-    "user_id" int,
-    "recency" smallint,
-    "frequency" smallint,
-    "monetary_value" smallint
-);
-```
-
-### 1.4.3. SQL-запрос для заполнения витрины
-
-SQL-скрипты для расчета показателей и заполнения целевой витрины.
-
-```SQL
--- Расчет целевых показателей и выделение в CTE
-WITH filter_orders_cte AS (
-    SELECT
-        o.order_id AS order_id,
-        o.user_id AS user_id,
-        o.order_ts AS order_ts,
-        o.payment AS payment
-    FROM
-        analysis.orders o
-        LEFT JOIN analysis.orderstatuses o2 ON o.status = o2.id
-    WHERE
-        o2."key" = 'Closed'
-        AND extract(year FROM o.order_ts) >= 2021
-),
-
-last_order_cte AS (
-    SELECT
-        row_number() over (
-            ORDER BY
-                current_date - max(order_ts :: date) DESC
-        ) AS row_id,
-        cast(count(1) over () AS double precision) AS total_row_count,
-        user_id AS user_id,
-        max(order_ts :: date) AS last_order_date,
-        current_date - max(order_ts :: date) AS last_order_day_interval
-    FROM
-        filter_orders_cte
-    GROUP BY
-        user_id
-),
-
-recency_cte AS (
-    SELECT
-        user_id AS user_id,
-        case
-            WHEN row_id <= (total_row_count / 5) * 1 THEN 1
-            WHEN (total_row_count / 5) * 1 < row_id
-            AND row_id <= (total_row_count / 5) * 2 THEN 2
-            WHEN (total_row_count / 5) * 2 < row_id
-            AND row_id <= (total_row_count / 5) * 3 THEN 3
-            WHEN (total_row_count / 5) * 3 < row_id
-            AND row_id <= (total_row_count / 5) * 4 THEN 4
-            ELSE 5
-        end AS recency
-    FROM
-        last_order_cte
-),
-
-orders_count_cte AS (
-    SELECT
-        row_number() over (
-            ORDER BY
-                count(order_id) ASC
-        ) AS row_id,
-        cast(count(1) over () AS double precision) AS total_row_count,
-        user_id AS user_id,
-        count(order_id) AS orders_count
-    FROM
-        filter_orders_cte
-    GROUP BY
-        user_id
-),
-
-frequency_cte AS (
-    SELECT
-        user_id AS user_id,
-        case
-            WHEN row_id <= (total_row_count / 5) * 1 THEN 1
-            WHEN (total_row_count / 5) * 1 < row_id
-            AND row_id <= (total_row_count / 5) * 2 THEN 2
-            WHEN (total_row_count / 5) * 2 < row_id
-            AND row_id <= (total_row_count / 5) * 3 THEN 3
-            WHEN (total_row_count / 5) * 3 < row_id
-            AND row_id <= (total_row_count / 5) * 4 THEN 4
-            ELSE 5
-        end AS frequency
-    FROM
-        orders_count_cte
-),
-
-payment_summary_cte AS (
-    SELECT
-        row_number() over (
-            ORDER BY
-                sum(payment) ASC
-        ) AS row_id,
-        cast(count(1) over () AS double precision) AS total_row_count,
-        user_id AS user_id,
-        sum(payment) AS payment_summary
-    FROM
-        filter_orders_cte
-    GROUP BY
-        user_id
-),
-
-monetary_value_cte AS (
-    SELECT
-        user_id AS user_id,
-        case
-            WHEN row_id <= (total_row_count / 5) * 1 THEN 1
-            WHEN (total_row_count / 5) * 1 < row_id
-            AND row_id <= (total_row_count / 5) * 2 THEN 2
-            WHEN (total_row_count / 5) * 2 < row_id
-            AND row_id <= (total_row_count / 5) * 3 THEN 3
-            WHEN (total_row_count / 5) * 3 < row_id
-            AND row_id <= (total_row_count / 5) * 4 THEN 4
-            ELSE 5
-        end AS monetary_value
-    FROM
-        payment_summary_cte
-),
-
-to_fill_in_cte AS (
-    SELECT
-        user_id,
-        recency,
-        frequency,
-        monetary_value
-    FROM
-        recency_cte
-        LEFT JOIN frequency_cte USING(user_id)
-        LEFT JOIN monetary_value_cte USING(user_id)
-)
-
--- Загрузка данных в витрину
-INSERT INTO
-    de.analysis.dm_rfm_segments (user_id, recency, frequency, monetary_value)
-SELECT
-    user_id,
-    recency,
-    frequency,
-    monetary_value
-FROM
-    to_fill_in_cte;
-```
-> ссылка на скрипт: [src/datamart_realization.sql](src/datamart_realization.sql)
-
-# 2. Доработка представлений
-
-Разработчики приложения обновили структуру данных в схеме production. В таблице production.orders больше нет поля статуса. 
-А это поле необходимо, потому что для анализа нужно выбрать только успешно выполненные заказы со статусом "Closed".
-Вместо поля с одним статусом в базу была добавлена таблица для журналирования всех изменений статусов заказов — production.orderstatuslog.
-Структура таблицы production.orderstatuslog:
-- id — синтетический автогенерируемый идентификатор записи.
-- order_id — идентификатор заказа, внешний ключ на таблицу production.orders.
-- status_id — идентификатор статуса, внешний ключ на таблицу статусов заказов production.orderstatuses.
-- dttm — дата и время получения заказом этого статуса.
-
-Чтобы скрипт по расчёту витрины продолжил работать, необходимо внести изменения в то, как формируется представление analysis.orders: вернуть в него поле status. 
-Значение в этом поле должно соответствовать последнему по времени статусу из таблицы production.orderstatuslog.
-
-SQL-скрипты для обновления логики заполнения VIEW analysis.orders:
-
-```SQL
--- Удаление VIEW со старой логикой
-DROP VIEW IF EXISTS de.analysis.orders;
-
--- Создание VIEW с новой логикой
-CREATE OR REPLACE VIEW de.analysis.orders AS
-
-WITH order_sequence_cte AS (
-    SELECT
-        order_id,
-        status_id,
-        dttm,
-        row_number() over (
-            PARTITION by order_id
-            ORDER BY
-                dttm :: timestamp DESC
-        ) AS sequence_orders
-    FROM
-        de.production.orderstatuslog
-),
-
-last_order_status_cte AS (
-    SELECT
-        order_id,
-        status_id
-    FROM
-        order_sequence_cte
-    WHERE
-        sequence_orders = 1
-) 
-
-SELECT
-    order_id,
-    order_ts,
-    user_id,
-    bonus_payment,
-    payment,
-    cost,
-    bonus_grant,
-    status_id AS "status"
-FROM
-    last_order_status_cte
-    LEFT JOIN de.production.orders o USING(order_id);
-```
-
-> ссылка на скрипт: [src/orders_view.sql](src/orders_view.sql)
+> [SQL для обновления логики формирования представления](src/orders_view.sql)

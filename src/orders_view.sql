@@ -1,9 +1,8 @@
--- Удаление VIEW со старой логикой
+-- Удаление view со старой логикой
 DROP VIEW IF EXISTS de.analysis.orders;
 
--- Создание VIEW с новой логикой
+-- Создание view с новой логикой
 CREATE OR REPLACE VIEW de.analysis.orders AS
-
 WITH order_sequence_cte AS (
     SELECT
         order_id,
