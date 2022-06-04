@@ -1,9 +1,7 @@
 -- Удаление таблицы
-
 DROP TABLE IF EXISTS de.analysis.tmp_rfm_recency;
 
 -- Создание таблицы
-
 CREATE TABLE de.analysis.tmp_rfm_recency (
     user_id INT NOT NULL PRIMARY KEY,
     recency INT NOT NULL CHECK(
@@ -13,7 +11,6 @@ CREATE TABLE de.analysis.tmp_rfm_recency (
 );
 
 -- Заполнение таблицы
-
 WITH filter_orders_cte AS (
     SELECT
         o.order_id AS order_id,

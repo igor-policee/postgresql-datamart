@@ -1,9 +1,7 @@
 -- Очистка таблицы
-
 TRUNCATE TABLE de.analysis.dm_rfm_segments;
 
 -- Заполнение таблицы
-
 INSERT INTO
     de.analysis.dm_rfm_segments (user_id, recency, frequency, monetary_value)
 SELECT

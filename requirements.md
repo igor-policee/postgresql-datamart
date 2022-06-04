@@ -25,9 +25,9 @@
 ## Структура исходных данных.
 
 Для построения витрины потребуются следующие таблицы и атрибуты:
-- `de.production.orders.order_id`
-- `de.production.orders.user_id`
-- `de.production.orders.order_ts`
-- `de.production.orders.payment`
-- `de.production.orderstatuses.id`
-- `de.production.orderstatuses.key`
+- `production.orders.order_id`
+- `production.orders.user_id`
+- `production.orders.order_ts`
+- `production.orders.payment`
+- `production.orderstatuses.id`
+- `production.orderstatuses.key`

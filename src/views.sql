@@ -1,5 +1,4 @@
 -- Создание шести представлений (по одному на каждую таблицу)
-
 CREATE OR REPLACE VIEW de.analysis.orderitems AS
 SELECT * FROM de.production.orderitems;
 
