@@ -1,5 +1,7 @@
 -- Удаление таблицы
-DROP TABLE IF EXISTS de.analysis.tmp_rfm_monetary_value;-- Создание таблицы
+DROP TABLE IF EXISTS de.analysis.tmp_rfm_monetary_value;
+
+-- Создание таблицы
 CREATE TABLE de.analysis.tmp_rfm_monetary_value (
     user_id INT NOT NULL PRIMARY KEY,
     monetary_value INT NOT NULL CHECK(
