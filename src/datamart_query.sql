@@ -15,6 +15,7 @@ FROM
 	INNER JOIN de.analysis.tmp_rfm_monetary_value trmv USING (user_id);
 
 /*
+
 Первые десять строк из полученной витрины, отсортированные по user_id
 
 |user_id|recency|frequency|monetary_value|
@@ -24,7 +25,7 @@ FROM
 |2      |2      |3        |5             |
 |3      |2      |3        |3             |
 |4      |4      |3        |3             |
-|5      |4      |5        |5             |
+|5      |5      |5        |5             |
 |6      |1      |3        |5             |
 |7      |4      |2        |2             |
 |8      |1      |1        |3             |

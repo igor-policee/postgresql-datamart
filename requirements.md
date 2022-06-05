@@ -31,3 +31,4 @@
 - `production.orders.payment`
 - `production.orderstatuses.id`
 - `production.orderstatuses.key`
+- `production.users.id`
