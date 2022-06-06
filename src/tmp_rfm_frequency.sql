@@ -4,50 +4,21 @@ DROP TABLE IF EXISTS de.analysis.tmp_rfm_frequency;
 -- Создание таблицы
 CREATE TABLE de.analysis.tmp_rfm_frequency (
     user_id INT NOT NULL PRIMARY KEY,
-    frequency INT NOT NULL CHECK(
-        frequency >= 1
-        AND frequency <= 5
-    )
+    frequency INT NOT NULL CHECK(frequency >= 1 AND frequency <= 5)
 );
 
 -- Заполнение таблицы
-WITH filter_orders_cte AS (
+WITH frequency_cte AS (
     SELECT
-        o.order_id AS order_id,
-        o.user_id AS user_id,
-        o.order_ts AS order_ts,
-        o.payment AS payment
+        u.id AS user_id,
+        NTILE (5) OVER (ORDER BY count(o.order_id) NULLS FIRST) AS frequency
     FROM
-        analysis.orders o
-        LEFT JOIN analysis.orderstatuses o2 ON o.status = o2.id
-    WHERE
-        o2."key" = 'Closed'
-        AND extract(
-            year
-            FROM
-                o.order_ts
-        ) >= 2021
-),
-
-orders_count_cte AS (
-    SELECT
-        user_id AS user_id,
-        count(order_id) AS orders_count
-    FROM
-        filter_orders_cte
+        analysis.users AS u
+        LEFT JOIN analysis.orders AS o ON u.id = o.user_id
+        AND o.status = 4
+        AND EXTRACT (YEAR FROM o.order_ts) >= 2021
     GROUP BY
-        user_id
-),
-
-frequency_cte AS (
-    SELECT
-        user_id,
-        ntile(5) OVER (
-            ORDER BY
-                orders_count ASC
-        ) AS frequency
-    FROM
-        orders_count_cte
+        u.id
 )
 
 INSERT INTO
